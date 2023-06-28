@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import * as argon2 from "argon2";
 import { Tokens } from './types';
 import { JwtService } from '@nestjs/jwt';
+import { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -44,6 +45,8 @@ export class AuthService {
         if (!passwordMatches) throw new ForbiddenException("Invalid credentials");
         const tokens = await this.getTokens(user.id, user.email);
         await this.updateRTHash(user.id, tokens.refresh_token);
+
+        
         return tokens;
 
     }
@@ -94,6 +97,23 @@ export class AuthService {
     }
     private hashToken(token: string) {
         return argon2.hash(token);
+    }
+    private setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
+        res.cookie('access_token', accessToken, {
+          httpOnly: true,
+          secure: true,
+          expires: new Date(Date.now() + 15 * 60 * 1000),
+        });
+    
+        res.cookie('refresh_token', refreshToken, {
+          httpOnly: true,
+          secure: true,
+          expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        });
+    }  
+    private deleteAuthCookies(res: Response): void {
+        res.clearCookie('access_token');
+        res.clearCookie('refresh_token');
     }
 
     private async getTokens(userId: number, email: string): Promise<Tokens> {
