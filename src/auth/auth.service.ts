@@ -13,6 +13,13 @@ export class AuthService {
         ) {}
     
     async signupLocal(dto : AuthDto): Promise<Tokens> {
+        const oldUser = await this.prisma.user.findUnique({
+            where: {
+                email: dto.email,
+            }
+        });
+        if (oldUser) throw new ForbiddenException("User already exists");
+
         const hash = await this.hashPassword(dto.password);
 
         const newUser = await this.prisma.user.create({
