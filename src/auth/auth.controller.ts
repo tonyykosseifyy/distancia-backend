@@ -1,9 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Req,Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto';
 import { Tokens } from './types';
 import {  RtGuard } from 'src/common/guards';
 import { GetCurrentUser, GetCurrentUserId, Public } from 'src/common/decorators';
+import { Response } from 'express';
+import { userType } from './types';
 
 @Controller('auth')
 export class AuthController {
@@ -12,29 +14,29 @@ export class AuthController {
     @Public()
     @Post('local/signup')
     @HttpCode(HttpStatus.CREATED)
-    signupLocal(@Body() dto: AuthDto): Promise<Tokens> {
-        return this.authService.signupLocal(dto);
+    signupLocal(@Body() dto: AuthDto, @Res() res: Response ) {
+        return this.authService.signupLocal(dto, res);
     }
     
     @Public()
     @Post('local/signin')
-    @HttpCode(HttpStatus.OK)
-    signinLocal(@Body() dto: AuthDto) : Promise<Tokens>{
-        return this.authService.signinLocal(dto);
+    // @HttpCode(HttpStatus.OK)
+    signinLocal(@Body() dto: AuthDto, @Res() res: Response) {
+        return this.authService.signinLocal(dto, res);
     }
     // @UseGuards(AtGuard)
     @Post('logout')
-    @HttpCode(HttpStatus.OK)
-    logout(@GetCurrentUserId() userId: number ) {
-        return this.authService.logout(userId);
+    // @HttpCode(HttpStatus.OK)
+    logout(@GetCurrentUserId() userId: number, @Res() res: Response ) {
+        return this.authService.logout(userId, res);
     }
 
     @Public()
     @UseGuards(RtGuard)
     @Post('refresh')
     @HttpCode(HttpStatus.OK)
-    refreshTokens(@GetCurrentUserId() userId: number, @GetCurrentUser("refreshToken") refreshToken: string) : Promise<Tokens>  {
-        return this.authService.refreshTokens(userId, refreshToken);
+    refreshTokens(@GetCurrentUserId() userId: number, @GetCurrentUser("refreshToken") refreshToken: string, @Res() res: Response)  {
+        return this.authService.refreshTokens(userId, refreshToken, res);
     }
 
 }

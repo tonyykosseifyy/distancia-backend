@@ -3,7 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthDto } from './dto';
 import * as bcrypt from 'bcrypt';
 import * as argon2 from "argon2";
-import { Tokens } from './types';
+import { Tokens, userType } from './types';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 
@@ -13,7 +13,7 @@ export class AuthService {
         private readonly jwtService: JwtService
         ) {}
     
-    async signupLocal(dto : AuthDto): Promise<Tokens> {
+    async signupLocal(dto : AuthDto, res: Response) {
         const oldUser = await this.prisma.user.findUnique({
             where: {
                 email: dto.email,
@@ -31,9 +31,14 @@ export class AuthService {
         })
         const tokens = await this.getTokens(newUser.id, newUser.email);
         await this.updateRTHash(newUser.id, tokens.refresh_token);
-        return tokens;
+        this.setAuthCookies(res, tokens.access_token, tokens.refresh_token);
+
+        res.status(200).json({
+            id: newUser.id,
+            email: newUser.email,
+        })
     }
-    async signinLocal(dto : AuthDto) : Promise<Tokens> {
+    async signinLocal(dto : AuthDto, res: Response) {
          const user =  await this.prisma.user.findUnique({
             where: {
                 email: dto.email,
@@ -46,10 +51,14 @@ export class AuthService {
         const tokens = await this.getTokens(user.id, user.email);
         await this.updateRTHash(user.id, tokens.refresh_token);
 
-        return tokens;
+        this.setAuthCookies(res, tokens.access_token, tokens.refresh_token);
 
+        res.status(200).json({
+            id: user.id,
+            email: user.email,
+        })
     }
-    async logout(userId: number) {
+    async logout(userId: number, res: Response) {
         await this.prisma.user.updateMany({
             where : {
                 id: userId,
@@ -61,8 +70,12 @@ export class AuthService {
                 hashedRt: null
             }
         })
+        this.deleteAuthCookies(res);
+        res.status(200).json({
+            message: "logged out successfully"
+        })
     }
-    async refreshTokens(userId: number, rt: string): Promise<Tokens> {
+    async refreshTokens(userId: number, rt: string, res: Response) {
         const user = await this.prisma.user.findUnique({
             where: {
                 id: userId,
@@ -74,7 +87,12 @@ export class AuthService {
         if (!rtMatches) throw new ForbiddenException("Invalid credentials");
         const tokens = await this.getTokens(user.id, user.email);
         await this.updateRTHash(user.id, tokens.refresh_token);
-        return tokens;
+        this.setAuthCookies(res, tokens.access_token, tokens.refresh_token);
+
+        res.status(200).json({
+            id: user.id,
+            email: user.email,
+        })
 
     }
 
