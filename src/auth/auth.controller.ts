@@ -15,6 +15,7 @@ export class AuthController {
     signupLocal(@Body() dto: AuthDto): Promise<Tokens> {
         return this.authService.signupLocal(dto);
     }
+    
     @Public()
     @Post('local/signin')
     @HttpCode(HttpStatus.OK)
@@ -25,7 +26,6 @@ export class AuthController {
     @Post('logout')
     @HttpCode(HttpStatus.OK)
     logout(@GetCurrentUserId() userId: number ) {
-    
         return this.authService.logout(userId);
     }
 
