@@ -5,7 +5,6 @@ import * as bcrypt from 'bcrypt';
 import * as argon2 from "argon2";
 import { Tokens, userType } from './types';
 import { JwtService } from '@nestjs/jwt';
-import { Response } from 'express';
 
 @Injectable()
 export class AuthService {
