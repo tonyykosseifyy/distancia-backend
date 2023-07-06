@@ -13,7 +13,7 @@ export class AuthService {
         private readonly jwtService: JwtService
         ) {}
     
-    async signupLocal(dto : AuthDto, res: Response) {
+    async signupLocal(dto : AuthDto) {
         const oldUser = await this.prisma.user.findUnique({
             where: {
                 email: dto.email,
@@ -31,14 +31,10 @@ export class AuthService {
         })
         const tokens = await this.getTokens(newUser.id, newUser.email);
         await this.updateRTHash(newUser.id, tokens.refresh_token);
-        this.setAuthCookies(res, tokens.access_token, tokens.refresh_token);
 
-        res.status(200).json({
-            id: newUser.id,
-            email: newUser.email,
-        })
+        return tokens; 
     }
-    async signinLocal(dto : AuthDto, res: Response) {
+    async signinLocal(dto : AuthDto) {
          const user =  await this.prisma.user.findUnique({
             where: {
                 email: dto.email,
@@ -51,14 +47,9 @@ export class AuthService {
         const tokens = await this.getTokens(user.id, user.email);
         await this.updateRTHash(user.id, tokens.refresh_token);
 
-        this.setAuthCookies(res, tokens.access_token, tokens.refresh_token);
-
-        res.status(200).json({
-            id: user.id,
-            email: user.email,
-        })
+        return tokens ;
     }
-    async logout(userId: number, res: Response) {
+    async logout(userId: number) {
         await this.prisma.user.updateMany({
             where : {
                 id: userId,
@@ -70,12 +61,8 @@ export class AuthService {
                 hashedRt: null
             }
         })
-        this.deleteAuthCookies(res);
-        res.status(200).json({
-            message: "logged out successfully"
-        })
     }
-    async refreshTokens(userId: number, rt: string, res: Response) {
+    async refreshTokens(userId: number, rt: string) {
         const user = await this.prisma.user.findUnique({
             where: {
                 id: userId,
@@ -87,12 +74,8 @@ export class AuthService {
         if (!rtMatches) throw new ForbiddenException("Invalid credentials");
         const tokens = await this.getTokens(user.id, user.email);
         await this.updateRTHash(user.id, tokens.refresh_token);
-        this.setAuthCookies(res, tokens.access_token, tokens.refresh_token);
-
-        res.status(200).json({
-            id: user.id,
-            email: user.email,
-        })
+        
+        return tokens ;
 
     }
 
@@ -115,24 +98,7 @@ export class AuthService {
     private hashToken(token: string) {
         return argon2.hash(token);
     }
-    private setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
-        res.cookie('access_token', accessToken, {
-          httpOnly: true,
-          secure: true,
-          expires: new Date(Date.now() + 15 * 60 * 1000),
-        });
-    
-        res.cookie('refresh_token', refreshToken, {
-          httpOnly: true,
-          secure: true,
-          expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        });
-    }  
-    private deleteAuthCookies(res: Response): void {
-        res.clearCookie('access_token');
-        res.clearCookie('refresh_token');
-    }
-
+   
     private async getTokens(userId: number, email: string): Promise<Tokens> {
         const [at, rt] = await Promise.all([
 
